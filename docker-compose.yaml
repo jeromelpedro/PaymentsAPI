@@ -18,24 +18,25 @@ services:
       timeout: 5s
       retries: 5
 
-  api:
+  payments-api:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: payments-api
+    container_name: cloudgames-Payment
     ports:
       - "5055:5055"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:5055"
 
-      RabbitMq__HostName: "rabbitmq"
+      RabbitMq__HostName: "cloudgames-rabbitmq" 
       RabbitMq__Port: "5672"
       RabbitMq__UserName: "guest"
       RabbitMq__Password: "guest"
       RabbitMq__ExchangeName: "cloudgames.topic"
-    depends_on:
-      - rabbitmq
+      RabbitMq__QueueNameOrderPlaced: "OrderPlacedEvent"
+      RabbitMq__QueueNamePaymentProcessed: "PaymentProcessedEvent"
+
     networks:
       - cloudgames-network
 
