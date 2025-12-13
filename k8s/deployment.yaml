@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payments-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payments-api
+  template:
+    metadata:
+      labels:
+        app: payments-api
+    spec:
+      containers:
+      - name: payments-api
+        image: paymentsapi:latest
+        ports:
+        - containerPort: 80
+        env:
+        - name: RabbitMq__Host
+          valueFrom:
+            configMapKeyRef:
+              name: paymentsapi-config
+              key: rabbitmq-host
+        - name: RabbitMq__Username
+          valueFrom:
+            secretKeyRef:
+              name: paymentsapi-secret
+              key: rabbitmq-username
+        - name: RabbitMq__Password
+          valueFrom:
+            secretKeyRef:
+              name: paymentsapi-secret
+              key: rabbitmq-password
