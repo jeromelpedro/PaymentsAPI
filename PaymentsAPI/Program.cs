@@ -9,11 +9,20 @@ builder.Services.AddMassTransit(x =>
     x.AddConsumer<OrderPlacedConsumer>();
     x.UsingRabbitMq((context, cfg) =>
     {
-        cfg.Host("rabbitmq", "/", h =>
+        var host = Environment.GetEnvironmentVariable("RabbitMq__HostName") ?? "rabbitmq";
+        var port = ushort.Parse(Environment.GetEnvironmentVariable("RabbitMq__Port") ?? "5672");
+        var username = Environment.GetEnvironmentVariable("RabbitMq__UserName") ?? "guest";
+        var password = Environment.GetEnvironmentVariable("RabbitMq__Password") ?? "guest";
+        var exchangeName = Environment.GetEnvironmentVariable("RabbitMq__ExchangeName") ?? "cloudgames.topic";
+        
+        cfg.Host(host, port, "/", h =>
         {
-            h.Username("guest");
-            h.Password("guest");
+            h.Username(username);
+            h.Password(password);
         });
+        
+        cfg.Message<PaymentProcessedEvent>(x => x.SetEntityName(exchangeName));
+        
         cfg.ReceiveEndpoint("order-placed-queue", e =>
         {
             e.ConfigureConsumer<OrderPlacedConsumer>(context);
