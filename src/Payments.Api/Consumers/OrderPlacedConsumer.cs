@@ -24,18 +24,19 @@ namespace Payments.Api.Consumers
 		{
 			var message = context.Message;
 
-			_logger.LogInformation("Processing payment for Order {OrderId}, User {UserId}, Amount {Price}", 
-				message.OrderId, message.UserId, message.Price);
+			_logger.LogInformation("Processing payment for Order {OrderId}, User {UserId}, Game {GameId}, Amount {Price}", 
+				message.OrderId, message.UserId, message.GameId, message.Price);
 
-			var isApproved = await _paymentService.ProcessPaymentAsync(message.OrderId, message.UserId, message.Price);
+			var isApproved = await _paymentService.ProcessPaymentAsync(
+				message.OrderId,
+				message.UserId,
+				message.GameId,
+				message.Price);
 
 			var paymentEvent = new PaymentProcessedEvent
 			{
 				OrderId = message.OrderId,
-				UserId = message.UserId,
-				UserEmail = message.UserEmail,
-				Amount = message.Price,
-				Status = isApproved ? "Approved" : "Declined"
+				Status = isApproved ? "Approved" : "Rejected"
 			};
 
 			await _publishEndpoint.Publish(paymentEvent);

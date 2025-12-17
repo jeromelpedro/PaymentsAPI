@@ -2,10 +2,9 @@ namespace Payments.Api.Models
 {
 	public class OrderPlacedEvent
 	{
-		public Guid OrderId { get; set; }
-		public Guid UserId { get; set; }
-		public string UserEmail { get; set; }
-		public Guid GameId { get; set; }
+		public string OrderId { get; set; } = string.Empty;
+		public string UserId { get; set; } = string.Empty;
+		public string GameId { get; set; } = string.Empty;
 		public decimal Price { get; set; }
 	}
 }

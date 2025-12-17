@@ -22,19 +22,15 @@ namespace Payments.Api.Controllers
 		public async Task<IActionResult> ProcessPayment([FromBody] PaymentRequest request)
 		{
 			var isApproved = await _paymentService.ProcessPaymentAsync(
-				request.OrderId, 
-				request.UserId, 
-				request.UserEmail, 
-				request.GameId, 
-				request.Amount);
+				request.OrderId,
+				request.UserId,
+				request.GameId,
+				request.Price);
 
 			var paymentEvent = new PaymentProcessedEvent
 			{
 				OrderId = request.OrderId,
-				UserId = request.UserId,
-				UserEmail = request.UserEmail,
-				Amount = request.Amount,
-				Status = isApproved ? "Approved" : "Declined"
+				Status = isApproved ? "Approved" : "Rejected"
 			};
 
 			await _publishEndpoint.Publish(paymentEvent);
