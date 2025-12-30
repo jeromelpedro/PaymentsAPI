@@ -91,9 +91,56 @@ flowchart LR
 - [Docker](https://www.docker.com/get-started) e Docker Compose
 - [Git](https://git-scm.com/)
 
-### Opção 1: Docker Compose (Recomendado)
+---
 
-A maneira mais fácil de rodar a aplicação com todas as dependências:
+### 🐛 Opção 1: Com debug (Recomendado para Desenvolvimento)
+
+Esta opção permite usar **breakpoints** e todas as funcionalidades de debug, rodando apenas o RabbitMQ no Docker.
+
+#### Passo 1: Subir apenas o RabbitMQ via Docker Compose
+
+```bash
+# Na raiz do projeto, suba apenas o RabbitMQ
+docker-compose up -d rabbitmq
+
+# Verifique se o RabbitMQ está rodando
+docker-compose ps
+
+# Aguarde o RabbitMQ ficar saudável (pode levar alguns segundos)
+docker-compose logs -f rabbitmq
+```
+
+> 💡 **Dica:** Acesse http://localhost:15672 para verificar o painel do RabbitMQ (usuário: `guest`, senha: `guest`)
+
+#### Passo 2: Rodar a aplicação com Debug no VS Code
+
+1. Abra o projeto no VS Code
+2. Abra o arquivo `Payments.slnx` ou a pasta `PaymentsAPI`
+3. Coloque seus **breakpoints** nos arquivos desejados (ex: `PaymentsController.cs`, `OrderPlacedConsumer.cs`)
+4. Pressione `F5` ou vá em **Run > Start Debugging**
+5. Selecione o perfil `http` ou `https`
+
+A aplicação estará disponível em:
+- **API:** http://localhost:5055
+- **Swagger:** http://localhost:5055/swagger
+
+#### Alternativa: Subir RabbitMQ sem Docker Compose
+
+```bash
+# Caso prefira rodar o RabbitMQ diretamente com Docker
+docker run -d --name rabbitmq \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=guest \
+  -e RABBITMQ_DEFAULT_PASS=guest \
+  rabbitmq:3.13-management-alpine
+```
+
+---
+
+### 🐳 Opção 2: Docker Compose Completo (Produção/Testes)
+
+Para rodar tudo em containers (sem debug/breakpoints):
 
 ```bash
 # Clone o repositório
@@ -117,18 +164,15 @@ docker-compose logs -f payments-api
 | PaymentsAPI Swagger | http://localhost:5055/swagger | Documentação da API |
 | RabbitMQ Management | http://localhost:15672 | Painel do RabbitMQ (guest/guest) |
 
-### Opção 2: Desenvolvimento Local
+---
 
-Para rodar localmente durante o desenvolvimento:
+### 💻 Opção 3: Desenvolvimento Local (sem VS Code Debug)
+
+Para rodar localmente via terminal:
 
 ```bash
 # 1. Primeiro, suba apenas o RabbitMQ
-docker run -d --name rabbitmq \
-  -p 5672:5672 \
-  -p 15672:15672 \
-  -e RABBITMQ_DEFAULT_USER=guest \
-  -e RABBITMQ_DEFAULT_PASS=guest \
-  rabbitmq:3.13-management-alpine
+docker-compose up -d rabbitmq
 
 # 2. Navegue até o projeto
 cd src/Payments.Api
@@ -143,12 +187,6 @@ dotnet run
 # - http://localhost:5055
 # - http://localhost:5055/swagger (Swagger UI)
 ```
-
-### Opção 3: Visual Studio / VS Code
-
-1. Abra a solução `Payments.slnx` no Visual Studio ou VS Code
-2. Certifique-se de que o RabbitMQ está rodando (veja Opção 2, passo 1)
-3. Pressione `F5` ou execute o perfil `http` / `https`
 
 ### Verificar se a aplicação está rodando
 
@@ -387,3 +425,9 @@ Este microsserviço faz parte do ecossistema **CloudGames**:
 ## 📝 Licença
 
 Este projeto faz parte de um estudo de arquitetura de microsserviços.
+
+
+# TODO
+
+- Validar kubernetes
+- Como rodar todos os projetos ao mesmo tempo
