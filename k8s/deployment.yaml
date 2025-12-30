@@ -2,6 +2,8 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: payments-api
+  labels:
+    app: payments-api
 spec:
   replicas: 1
   selector:
@@ -14,22 +16,36 @@ spec:
     spec:
       containers:
       - name: payments-api
-        image: paymentsapi:latest
+        image: payments-api:latest
+        imagePullPolicy: IfNotPresent
         ports:
-        - containerPort: 80
-        env:
-        - name: RabbitMq__Host
-          valueFrom:
-            configMapKeyRef:
-              name: paymentsapi-config
-              key: rabbitmq-host
-        - name: RabbitMq__Username
-          valueFrom:
-            secretKeyRef:
-              name: paymentsapi-secret
-              key: rabbitmq-username
-        - name: RabbitMq__Password
-          valueFrom:
-            secretKeyRef:
-              name: paymentsapi-secret
-              key: rabbitmq-password
+        - containerPort: 5055
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: payments-api-config
+        - secretRef:
+            name: payments-api-secret
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5055
+          initialDelaySeconds: 15
+          periodSeconds: 20
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5055
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
