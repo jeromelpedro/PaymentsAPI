@@ -7,17 +7,18 @@ namespace Payments.Api.Consumers
 	public class OrderPlacedConsumer : IConsumer<OrderPlacedEvent>
 	{
 		private readonly IPaymentService _paymentService;
-		private readonly IPublishEndpoint _publishEndpoint;
+		private readonly IRabbitMqPublisher _rabbitMqPublisher;
 		private readonly ILogger<OrderPlacedConsumer> _logger;
 
 		public OrderPlacedConsumer(
-			IPaymentService paymentService, 
+			IPaymentService paymentService,
 			IPublishEndpoint publishEndpoint,
-			ILogger<OrderPlacedConsumer> logger)
+			ILogger<OrderPlacedConsumer> logger,
+			IRabbitMqPublisher rabbitMqPublisher)
 		{
 			_paymentService = paymentService;
-			_publishEndpoint = publishEndpoint;
 			_logger = logger;
+			_rabbitMqPublisher = rabbitMqPublisher;
 		}
 
 		public async Task Consume(ConsumeContext<OrderPlacedEvent> context)
@@ -36,10 +37,14 @@ namespace Payments.Api.Consumers
 			var paymentEvent = new PaymentProcessedEvent
 			{
 				OrderId = message.OrderId,
-				Status = isApproved ? "Approved" : "Rejected"
+				UserId = message.UserId,
+				GameId = message.GameId,
+				Price = message.Price,
+				EmailUser = message.EmailUser,
+				Status = isApproved ? PaymentStatus.Approved : PaymentStatus.Rejected
 			};
 
-			await _publishEndpoint.Publish(paymentEvent);
+			await _rabbitMqPublisher.PublishAsync(paymentEvent, "PaymentProcessedEvent");
 
 			_logger.LogInformation("Payment for Order {OrderId} processed with status: {Status}", 
 				message.OrderId, paymentEvent.Status);

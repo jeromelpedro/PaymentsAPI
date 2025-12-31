@@ -5,6 +5,7 @@ namespace Payments.Api.Models
 		public string OrderId { get; set; } = string.Empty;
 		public string UserId { get; set; } = string.Empty;
 		public string GameId { get; set; } = string.Empty;
+		public string EmailUser { get; set; } = string.Empty;
 		public decimal Price { get; set; }
 	}
 }

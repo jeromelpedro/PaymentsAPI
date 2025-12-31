@@ -29,15 +29,15 @@ namespace Payments.Api.Configurations
 
 					cfg.Publish<OrderPlacedEvent>(p => p.Exclude = true);
 
-					cfg.Message<PaymentProcessedEvent>(e => e.SetEntityName(settings.ExchangeName));
-					cfg.Publish<PaymentProcessedEvent>(p =>
-					{
-						p.ExchangeType = "topic";
-					});
-					cfg.Send<PaymentProcessedEvent>(s =>
-					{
-						s.UseRoutingKeyFormatter(ctx => settings.QueueNamePaymentProcessed);
-					});
+					//cfg.Message<PaymentProcessedEvent>(e => e.SetEntityName(settings.ExchangeName));
+					//cfg.Publish<PaymentProcessedEvent>(p =>
+					//{
+					//	p.ExchangeType = "topic";
+					//});
+					//cfg.Send<PaymentProcessedEvent>(s =>
+					//{
+					//	s.UseRoutingKeyFormatter(ctx => settings.QueueNamePaymentProcessed);
+					//});
 
 					cfg.ReceiveEndpoint(settings.QueueNameOrderPlaced, e =>
 					{

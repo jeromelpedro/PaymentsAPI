@@ -2,6 +2,7 @@ using MassTransit;
 using Microsoft.AspNetCore.Mvc;
 using Payments.Api.Models;
 using Payments.Api.Services.Interfaces;
+using static MassTransit.Monitoring.Performance.BuiltInCounters;
 
 namespace Payments.Api.Controllers
 {
@@ -10,12 +11,13 @@ namespace Payments.Api.Controllers
 	public class PaymentsController : ControllerBase
 	{
 		private readonly IPaymentService _paymentService;
-		private readonly IPublishEndpoint _publishEndpoint;
+		private readonly IRabbitMqPublisher _rabbitMqPublisher;
 
-		public PaymentsController(IPaymentService paymentService, IPublishEndpoint publishEndpoint)
+
+		public PaymentsController(IPaymentService paymentService, IRabbitMqPublisher rabbitMqPublisher)
 		{
 			_paymentService = paymentService;
-			_publishEndpoint = publishEndpoint;
+			_rabbitMqPublisher = rabbitMqPublisher;
 		}
 
 		[HttpPost("process")]
@@ -30,10 +32,14 @@ namespace Payments.Api.Controllers
 			var paymentEvent = new PaymentProcessedEvent
 			{
 				OrderId = request.OrderId,
-				Status = isApproved ? "Approved" : "Rejected"
+				UserId = request.UserId,
+				GameId = request.GameId,
+				Price = request.Price,
+				EmailUser = request.EmailUser,
+				Status = isApproved ? PaymentStatus.Approved : PaymentStatus.Rejected
 			};
 
-			await _publishEndpoint.Publish(paymentEvent);
+			await _rabbitMqPublisher.PublishAsync(paymentEvent, "PaymentProcessedEvent");
 
 			if (isApproved)
 			{
