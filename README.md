@@ -97,17 +97,25 @@ flowchart LR
 
 Esta opção permite usar **breakpoints** e todas as funcionalidades de debug, rodando apenas o RabbitMQ no Docker.
 
-#### Passo 1: Subir apenas o RabbitMQ via Docker Compose
+#### Passo 1: Garantir que o RabbitMQ esteja rodando
 
+> ⚠️ **Nota:** O RabbitMQ não faz parte do docker-compose deste projeto. Ele deve ser iniciado a partir de outro projeto do ecossistema CloudGames ou manualmente.
+
+**Opção A:** Subir via outro projeto CloudGames (ex: CatalogAPI ou NotificationsAPI)
+
+**Opção B:** Subir manualmente com Docker:
 ```bash
-# Na raiz do projeto, suba apenas o RabbitMQ
-docker-compose up -d rabbitmq
+# Criar a rede compartilhada (se ainda não existir)
+docker network create cloudgames-network
 
-# Verifique se o RabbitMQ está rodando
-docker-compose ps
-
-# Aguarde o RabbitMQ ficar saudável (pode levar alguns segundos)
-docker-compose logs -f rabbitmq
+# Subir o RabbitMQ
+docker run -d --name cloudgames-rabbitmq \
+  --network cloudgames-network \
+  -p 5672:5672 \
+  -p 15672:15672 \
+  -e RABBITMQ_DEFAULT_USER=guest \
+  -e RABBITMQ_DEFAULT_PASS=guest \
+  rabbitmq:3.13-management-alpine
 ```
 
 > 💡 **Dica:** Acesse http://localhost:15672 para verificar o painel do RabbitMQ (usuário: `guest`, senha: `guest`)
@@ -121,20 +129,8 @@ docker-compose logs -f rabbitmq
 5. Selecione o perfil `http` ou `https`
 
 A aplicação estará disponível em:
-- **API:** http://localhost:5055
-- **Swagger:** http://localhost:5055/swagger
-
-#### Alternativa: Subir RabbitMQ sem Docker Compose
-
-```bash
-# Caso prefira rodar o RabbitMQ diretamente com Docker
-docker run -d --name rabbitmq \
-  -p 5672:5672 \
-  -p 15672:15672 \
-  -e RABBITMQ_DEFAULT_USER=guest \
-  -e RABBITMQ_DEFAULT_PASS=guest \
-  rabbitmq:3.13-management-alpine
-```
+- **API:** http://localhost:5059
+- **Swagger:** http://localhost:5059/swagger
 
 ---
 
@@ -147,7 +143,7 @@ Para rodar tudo em containers (sem debug/breakpoints):
 git clone https://github.com/seu-usuario/PaymentsAPI.git
 cd PaymentsAPI
 
-# Suba todos os serviços (RabbitMQ + API)
+# Suba todos os serviços
 docker-compose up -d
 
 # Verifique se os containers estão rodando
@@ -160,9 +156,10 @@ docker-compose logs -f payments-api
 **Serviços disponíveis:**
 | Serviço | URL | Descrição |
 |---------|-----|-----------|
-| PaymentsAPI | http://localhost:5055 | API de Pagamentos |
-| PaymentsAPI Swagger | http://localhost:5055/swagger | Documentação da API |
-| RabbitMQ Management | http://localhost:15672 | Painel do RabbitMQ (guest/guest) |
+| PaymentsAPI | http://localhost:5058 | API de Pagamentos |
+| PaymentsAPI Swagger | http://localhost:5058/swagger | Documentação da API |
+
+> ⚠️ **Nota:** O RabbitMQ não é iniciado pelo docker-compose deste projeto. A rede `cloudgames-network` é configurada como externa. Certifique-se de que o RabbitMQ já esteja rodando em outro projeto do ecossistema CloudGames.
 
 ---
 
@@ -171,8 +168,7 @@ docker-compose logs -f payments-api
 Para rodar localmente via terminal:
 
 ```bash
-# 1. Primeiro, suba apenas o RabbitMQ
-docker-compose up -d rabbitmq
+# 1. Primeiro, garanta que o RabbitMQ esteja rodando (veja Opção 1 - Passo 1)
 
 # 2. Navegue até o projeto
 cd src/Payments.Api
@@ -184,24 +180,24 @@ dotnet restore
 dotnet run
 
 # A API estará disponível em:
-# - http://localhost:5055
-# - http://localhost:5055/swagger (Swagger UI)
+# - http://localhost:5059
+# - http://localhost:5059/swagger (Swagger UI)
 ```
 
 ### Verificar se a aplicação está rodando
 
 ```bash
 # Health check
-curl http://localhost:5055/api/payments/health
+curl http://localhost:5059/api/payments/health
 
 # Resposta esperada:
 # {"status":"healthy","service":"PaymentsAPI"}
 
 # Ou acesse a raiz
-curl http://localhost:5055
+curl http://localhost:5059
 
 # Resposta esperada:
-# PaymentsAPI is running on port 5055...
+# PaymentsAPI is running...
 ```
 
 ### Parar a aplicação
@@ -224,12 +220,13 @@ Processa um pagamento manualmente via API REST.
 
 **Request:**
 ```bash
-curl -X POST http://localhost:5055/api/payments/process \
+curl -X POST http://localhost:5059/api/payments/process \
   -H "Content-Type: application/json" \
   -d '{
     "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "userId": "11111111-2222-3333-4444-555555555555",
     "gameId": "aaaabbbb-cccc-dddd-eeee-ffffffffffff",
+    "emailUser": "usuario@email.com",
     "price": 59.99
   }'
 ```
@@ -256,7 +253,7 @@ Verifica o status de saúde do serviço.
 
 **Request:**
 ```bash
-curl http://localhost:5055/api/payments/health
+curl http://localhost:5059/api/payments/health
 ```
 
 **Response:**
@@ -273,7 +270,7 @@ Endpoint raiz para verificação rápida.
 
 **Response:**
 ```
-PaymentsAPI is running on port 5055...
+PaymentsAPI is running...
 ```
 
 ---
@@ -296,6 +293,7 @@ Este serviço consome o evento `OrderPlacedEvent` da fila RabbitMQ.
   "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
   "userId": "11111111-2222-3333-4444-555555555555",
   "gameId": "aaaabbbb-cccc-dddd-eeee-ffffffffffff",
+  "emailUser": "usuario@email.com",
   "price": 59.99
 }
 ```
@@ -305,6 +303,7 @@ Este serviço consome o evento `OrderPlacedEvent` da fila RabbitMQ.
 | `orderId` | string | Identificador único do pedido |
 | `userId` | string | Identificador do usuário |
 | `gameId` | string | Identificador do jogo comprado |
+| `emailUser` | string | Email do usuário para notificação |
 | `price` | decimal | Valor do pagamento |
 
 > **⚠️ Importante:** O payload deve ser enviado como JSON puro (sem envelope do MassTransit), pois o serviço utiliza `UseRawJsonSerializer()`.
@@ -321,6 +320,10 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 ```json
 {
   "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "userId": "11111111-2222-3333-4444-555555555555",
+  "gameId": "aaaabbbb-cccc-dddd-eeee-ffffffffffff",
+  "emailUser": "usuario@email.com",
+  "price": 59.99,
   "status": "Approved"
 }
 ```
@@ -328,7 +331,11 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 | Campo | Tipo | Valores | Descrição |
 |-------|------|---------|-----------|
 | `orderId` | string | - | Identificador do pedido |
-| `status` | string | `Approved`, `Rejected` | Resultado do pagamento |
+| `userId` | string | - | Identificador do usuário |
+| `gameId` | string | - | Identificador do jogo comprado |
+| `emailUser` | string | - | Email do usuário para notificação |
+| `price` | decimal | - | Valor do pagamento |
+| `status` | enum | `Approved`, `Rejected` | Resultado do pagamento (PaymentStatus) |
 
 ---
 
@@ -339,7 +346,7 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 | Variável | Descrição | Padrão |
 |----------|-----------|--------|
 | `ASPNETCORE_ENVIRONMENT` | Ambiente de execução | `Development` |
-| `ASPNETCORE_URLS` | URLs da aplicação | `http://localhost:5055` |
+| `ASPNETCORE_URLS` | URLs da aplicação | `http://localhost:5059` |
 | `RabbitMq__HostName` | Host do RabbitMQ | `localhost` |
 | `RabbitMq__Port` | Porta do RabbitMQ | `5672` |
 | `RabbitMq__UserName` | Usuário do RabbitMQ | `guest` |
@@ -435,12 +442,12 @@ payments-api-75b78fc9f-xxxxx   1/1     Running   0          30s
 Como o Service é do tipo `ClusterIP`, use **port-forward** para acessar localmente:
 
 ```bash
-kubectl port-forward service/payments-api 5055:5055
+kubectl port-forward service/payments-api 5058:5058
 ```
 
 A aplicação estará disponível em:
-- **API:** http://localhost:5055
-- **Swagger:** http://localhost:5055/swagger
+- **API:** http://localhost:5058
+- **Swagger:** http://localhost:5058/swagger
 
 ### Arquivos de Configuração Kubernetes
 
@@ -517,8 +524,10 @@ PaymentsAPI/
         │   └── launchSettings.json     # Perfis de execução
         └── Services/
             ├── PaymentService.cs       # Lógica de pagamento
+            ├── RabbitMqPublisher.cs    # Publicador customizado RabbitMQ
             └── Interfaces/
-                └── IPaymentService.cs  # Contrato do serviço
+                ├── IPaymentService.cs  # Contrato do serviço
+                └── IRabbitMqPublisher.cs # Contrato do publicador
 ```
 
 ---
@@ -538,8 +547,3 @@ Este microsserviço faz parte do ecossistema **CloudGames**:
 ## 📝 Licença
 
 Este projeto faz parte de um estudo de arquitetura de microsserviços.
-
-
-# TODO
-
-- Como rodar todos os projetos ao mesmo tempo
