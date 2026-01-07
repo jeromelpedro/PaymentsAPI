@@ -4,27 +4,21 @@ using Payments.Api.Services.Interfaces;
 using RabbitMQ.Client;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Payments.Api.Services
 {
 	public class RabbitMqPublisher : IRabbitMqPublisher
 	{
 		private readonly RabbitMqSettings _settings;
-		private readonly JsonSerializerOptions _jsonOptions;
 
 		public RabbitMqPublisher(IOptions<RabbitMqSettings> options)
 		{
 			_settings = options.Value;
-			_jsonOptions = new JsonSerializerOptions
-			{
-				Converters = { new JsonStringEnumConverter() }
-			};
 		}
 
 		public async Task PublishAsync<T>(T message, string topic)
 		{
-			var json = JsonSerializer.Serialize(message, _jsonOptions);
+			var json = JsonSerializer.Serialize(message);
 			var body = Encoding.UTF8.GetBytes(json);
 
 			var factory = new ConnectionFactory
