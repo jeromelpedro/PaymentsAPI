@@ -6,8 +6,8 @@ metadata:
     app: payments-api
 data:
   ASPNETCORE_ENVIRONMENT: "Production"
-  ASPNETCORE_HTTP_PORTS: "5055"
-  RabbitMq__HostName: "rabbitmq"
+  ASPNETCORE_HTTP_PORTS: "5058"
+  RabbitMq__HostName: "cloudgames-rabbitmq"
   RabbitMq__Port: "5672"
   RabbitMq__ExchangeName: "cloudgames.topic"
   RabbitMq__QueueNameOrderPlaced: "OrderPlacedEvent"

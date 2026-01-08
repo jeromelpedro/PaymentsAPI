@@ -1,4 +1,5 @@
 using MassTransit;
+using Microsoft.Extensions.Options;
 using Payments.Api.Models;
 using Payments.Api.Services.Interfaces;
 
@@ -9,16 +10,19 @@ namespace Payments.Api.Consumers
 		private readonly IPaymentService _paymentService;
 		private readonly IRabbitMqPublisher _rabbitMqPublisher;
 		private readonly ILogger<OrderPlacedConsumer> _logger;
+		private readonly RabbitMqSettings _settings;
 
 		public OrderPlacedConsumer(
 			IPaymentService paymentService,
 			IPublishEndpoint publishEndpoint,
 			ILogger<OrderPlacedConsumer> logger,
-			IRabbitMqPublisher rabbitMqPublisher)
+			IRabbitMqPublisher rabbitMqPublisher,
+			IOptions<RabbitMqSettings> options)
 		{
 			_paymentService = paymentService;
 			_logger = logger;
 			_rabbitMqPublisher = rabbitMqPublisher;
+			_settings = options.Value;
 		}
 
 		public async Task Consume(ConsumeContext<OrderPlacedEvent> context)
@@ -44,7 +48,7 @@ namespace Payments.Api.Consumers
 				Status = isApproved ? PaymentStatus.Approved : PaymentStatus.Rejected
 			};
 
-			await _rabbitMqPublisher.PublishAsync(paymentEvent, "PaymentProcessedEvent");
+			await _rabbitMqPublisher.PublishAsync(paymentEvent, _settings.QueueNamePaymentProcessed);
 
 			_logger.LogInformation("Payment for Order {OrderId} processed with status: {Status}", 
 				message.OrderId, paymentEvent.Status);

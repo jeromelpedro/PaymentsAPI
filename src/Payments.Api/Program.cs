@@ -19,15 +19,15 @@ builder.Services.AddTransient<IRabbitMqPublisher, RabbitMqPublisher>();
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
+//if (app.Environment.IsDevelopment())
+//{
 	app.UseSwagger();
 	app.UseSwaggerUI();
-}
+//}
 
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapGet("/", () => "PaymentsAPI is running on port 5055...");
+app.MapGet("/", () => "PaymentsAPI is running...");
 
 await app.RunAsync();

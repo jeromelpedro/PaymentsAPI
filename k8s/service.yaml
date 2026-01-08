@@ -11,5 +11,5 @@ spec:
   ports:
     - name: http
       protocol: TCP
-      port: 5055
-      targetPort: 5055
+      port: 5058
+      targetPort: 5058
