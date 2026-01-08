@@ -1,13 +1,13 @@
-using MassTransit;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Payments.Api.Models;
 using Payments.Api.Services.Interfaces;
-using static MassTransit.Monitoring.Performance.BuiltInCounters;
 
 namespace Payments.Api.Controllers
 {
 	[ApiController]
 	[Route("api/[controller]")]
+	[Authorize]
 	public class PaymentsController : ControllerBase
 	{
 		private readonly IPaymentService _paymentService;
@@ -50,6 +50,7 @@ namespace Payments.Api.Controllers
 		}
 
 		[HttpGet("health")]
+		[AllowAnonymous]
 		public IActionResult Health()
 		{
 			return Ok(new { status = "healthy", service = "PaymentsAPI" });

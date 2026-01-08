@@ -11,6 +11,8 @@ builder.Services.AddRabbitMqConfiguration(builder.Configuration);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddAuthConfiguration(builder.Configuration);
+
 
 builder.Services.AddTransient<IPaymentService, PaymentService>();
 builder.Services.AddTransient<IRabbitMqPublisher, RabbitMqPublisher>();
@@ -23,6 +25,7 @@ if (app.Environment.IsDevelopment())
 	app.UseSwaggerUI();
 }
 
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 app.MapGet("/", () => "PaymentsAPI is running on port 5055...");
