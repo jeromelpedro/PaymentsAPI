@@ -16,6 +16,7 @@ builder.Services.AddAuthConfiguration(builder.Configuration);
 
 builder.Services.AddTransient<IPaymentService, PaymentService>();
 builder.Services.AddTransient<IRabbitMqPublisher, RabbitMqPublisher>();
+builder.Services.AddSwaggerConfiguration();
 
 var app = builder.Build();
 
