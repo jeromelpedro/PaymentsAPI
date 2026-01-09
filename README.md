@@ -42,6 +42,7 @@ O serviço simula um gateway de pagamento:
 | MassTransit | 8.5.7 | Abstração para mensageria |
 | RabbitMQ.Client | 7.2.0 | Cliente RabbitMQ |
 | Swashbuckle | 6.5.0 | Documentação Swagger/OpenAPI |
+| JWT Bearer | 9.0 | Autenticação via token JWT |
 | Docker | - | Containerização |
 | Kubernetes | - | Orquestração (opcional) |
 
@@ -273,6 +274,28 @@ Endpoint raiz para verificação rápida.
 PaymentsAPI is running...
 ```
 
+### Autenticação JWT
+
+A API utiliza autenticação via **JWT Bearer Token**. Para acessar os endpoints protegidos:
+
+1. Obtenha um token JWT válido através do serviço de autenticação do ecossistema CloudGames
+2. Inclua o token no header `Authorization: Bearer <seu-token>`
+
+**Políticas de Autorização:**
+
+| Política | Roles Permitidos | Descrição |
+|----------|------------------|-----------|
+| `Admin` | `Admin` | Acesso total ao sistema |
+| `Leitura` | `Leitura`, `Admin` | Acesso de leitura |
+
+**Exemplo de requisição autenticada:**
+```bash
+curl -X POST http://localhost:5059/api/payments/process \
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -d '{"orderId": "...", "userId": "...", "gameId": "...", "emailUser": "...", "price": 59.99}'
+```
+
 ---
 
 ## 📨 Eventos e Mensageria
@@ -347,6 +370,9 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 |----------|-----------|--------|
 | `ASPNETCORE_ENVIRONMENT` | Ambiente de execução | `Development` |
 | `ASPNETCORE_URLS` | URLs da aplicação | `http://localhost:5059` |
+| `Jwt__Key` | Chave secreta para assinatura do JWT | `chave-secreta-super-forte-123456` |
+| `Jwt__Issuer` | Emissor do token JWT | `CloudGamesAPI` |
+| `Jwt__Audience` | Audiência do token JWT | `CloudGamesAPIClient` |
 | `RabbitMq__HostName` | Host do RabbitMQ | `localhost` |
 | `RabbitMq__Port` | Porta do RabbitMQ | `5672` |
 | `RabbitMq__UserName` | Usuário do RabbitMQ | `guest` |
@@ -364,6 +390,11 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
       "Default": "Information",
       "Microsoft.AspNetCore": "Warning"
     }
+  },
+  "Jwt": {
+    "Key": "chave-secreta-super-forte-123456",
+    "Issuer": "CloudGamesAPI",
+    "Audience": "CloudGamesAPIClient"
   },
   "RabbitMq": {
     "HostName": "localhost",
