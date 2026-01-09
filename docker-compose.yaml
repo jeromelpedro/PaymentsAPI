@@ -10,6 +10,10 @@ services:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:5058"
 
+      Jwt__Key: "chave-secreta-super-forte-123456"
+      Jwt__Issuer: "CloudGamesAPI"
+      Jwt__Audience: "CloudGamesAPIClient"
+
       RabbitMq__HostName: "cloudgames-rabbitmq" 
       RabbitMq__Port: "5672"
       RabbitMq__UserName: "guest"
