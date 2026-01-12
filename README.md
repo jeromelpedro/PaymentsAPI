@@ -1,4 +1,4 @@
-# PaymentsAPI
+# FIAP Cloud Games - Payments API
 
 Microsserviço de Pagamentos responsável por processar (simular) o pagamento de compras de jogos no ecossistema CloudGames.
 
