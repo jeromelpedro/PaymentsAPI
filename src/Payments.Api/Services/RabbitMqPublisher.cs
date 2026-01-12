@@ -39,19 +39,6 @@ namespace Payments.Api.Services
 					autoDelete: false,
 					arguments: null);
 
-				await channel.QueueDeclareAsync(
-					queue: topic,
-					durable: true,
-					exclusive: false,
-					autoDelete: false,
-					arguments: null);
-
-				await channel.QueueBindAsync(
-					queue: topic,
-					exchange: _settings.ExchangeName,
-					routingKey: topic,
-					arguments: null);
-
 				var properties = new BasicProperties
 				{
 					Persistent = true,
