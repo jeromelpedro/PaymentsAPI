@@ -13,20 +13,33 @@ namespace Payments.Api.Services
 
 		public Task<bool> ProcessPaymentAsync(string orderId, string userId, string gameId, decimal price)
 		{
-			_logger.LogInformation("--------------------------------------------------");
-			_logger.LogInformation("[PAYMENT SERVICE] Processing payment");
-			_logger.LogInformation("[ORDER ID] {OrderId}", orderId);
-			_logger.LogInformation("[USER ID] {UserId}", userId);
-			_logger.LogInformation("[GAME ID] {GameId}", gameId);
-			_logger.LogInformation("[PRICE] R$ {Price}", price);
+			_logger.LogInformation("ProcessPaymentAsync iniciado para OrderId={orderId}", orderId);
 
-			// Simulate payment processing logic
-			var isApproved = SimulatePaymentGateway(price);
+			try
+			{
+				_logger.LogInformation("--------------------------------------------------");
+				_logger.LogInformation("[PAYMENT SERVICE] Processing payment");
+				_logger.LogInformation("[ORDER ID] {OrderId}", orderId);
+				_logger.LogInformation("[USER ID] {UserId}", userId);
+				_logger.LogInformation("[GAME ID] {GameId}", gameId);
+				_logger.LogInformation("[PRICE] R$ {Price}", price);
 
-			_logger.LogInformation("[STATUS] {Status}", isApproved ? "APPROVED" : "DECLINED");
-			_logger.LogInformation("--------------------------------------------------");
+				// Simulate payment processing logic
+				var isApproved = SimulatePaymentGateway(price);
 
-			return Task.FromResult(isApproved);
+				_logger.LogInformation("[STATUS] {Status}", isApproved ? "APPROVED" : "DECLINED");
+				_logger.LogInformation("--------------------------------------------------");
+
+				_logger.LogInformation("ProcessPaymentAsync concluído para OrderId={orderId} Status={status}",
+					orderId, isApproved ? "APPROVED" : "DECLINED");
+
+				return Task.FromResult(isApproved);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erro em ProcessPaymentAsync para OrderId={orderId}", orderId);
+				throw;
+			}
 		}
 
 		private bool SimulatePaymentGateway(decimal price)
