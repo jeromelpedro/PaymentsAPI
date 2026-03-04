@@ -29,29 +29,42 @@ namespace Payments.Api.Consumers
 		{
 			var message = context.Message;
 
-			_logger.LogInformation("Processing payment for Order {OrderId}, User {UserId}, Game {GameId}, Amount {Price}", 
+			_logger.LogInformation("Consume iniciado para OrderId={orderId} UserId={userId} GameId={gameId} Price={price}",
 				message.OrderId, message.UserId, message.GameId, message.Price);
 
-			var isApproved = await _paymentService.ProcessPaymentAsync(
-				message.OrderId,
-				message.UserId,
-				message.GameId,
-				message.Price);
-
-			var paymentEvent = new PaymentProcessedEvent
+			try
 			{
-				OrderId = message.OrderId,
-				UserId = message.UserId,
-				GameId = message.GameId,
-				Price = message.Price,
-				EmailUser = message.EmailUser,
-				Status = isApproved ? PaymentStatus.Approved : PaymentStatus.Rejected
-			};
+				_logger.LogInformation("Processing payment for Order {OrderId}, User {UserId}, Game {GameId}, Amount {Price}", 
+					message.OrderId, message.UserId, message.GameId, message.Price);
 
-			await _rabbitMqPublisher.PublishAsync(paymentEvent, _settings.QueueNamePaymentProcessed);
+				var isApproved = await _paymentService.ProcessPaymentAsync(
+					message.OrderId,
+					message.UserId,
+					message.GameId,
+					message.Price);
 
-			_logger.LogInformation("Payment for Order {OrderId} processed with status: {Status}", 
-				message.OrderId, paymentEvent.Status);
+				var paymentEvent = new PaymentProcessedEvent
+				{
+					OrderId = message.OrderId,
+					UserId = message.UserId,
+					GameId = message.GameId,
+					Price = message.Price,
+					EmailUser = message.EmailUser,
+					Status = isApproved ? PaymentStatus.Approved : PaymentStatus.Rejected
+				};
+
+				await _rabbitMqPublisher.PublishAsync(paymentEvent, _settings.QueueNamePaymentProcessed);
+
+				_logger.LogInformation("Payment for Order {OrderId} processed with status: {Status}", 
+					message.OrderId, paymentEvent.Status);
+
+				_logger.LogInformation("Consume concluído com sucesso para OrderId={orderId}", message.OrderId);
+			}
+			catch (Exception ex)
+			{
+				_logger.LogError(ex, "Erro em Consume para OrderId={orderId}", message.OrderId);
+				throw;
+			}
 		}
 	}
 }
