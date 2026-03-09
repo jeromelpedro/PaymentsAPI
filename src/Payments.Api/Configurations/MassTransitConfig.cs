@@ -24,8 +24,11 @@ namespace Payments.Api.Configurations
 					cfg.Message<OrderPlacedEvent>(e => e.SetEntityName(settings.OrderPlacedTopicName));
 					cfg.Message<PaymentProcessedEvent>(e => e.SetEntityName(settings.PaymentProcessedTopicName));
 
+					// Subscription endpoint - assumes topic and subscription already exist
 					cfg.SubscriptionEndpoint<OrderPlacedEvent>(settings.OrderPlacedSubscriptionName, e =>
 					{
+						// Disable automatic entity management (requires only Send/Listen permissions)
+						e.ConfigureConsumeTopology = false;
 						e.ConfigureConsumer<OrderPlacedConsumer>(context);
 					});
 				});

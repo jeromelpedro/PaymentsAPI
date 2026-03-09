@@ -14,6 +14,12 @@ Microsserviço de Pagamentos responsável por processar (simular) o pagamento de
 - [Kubernetes](#-kubernetes)
 - [Estrutura do Projeto](#-estrutura-do-projeto)
 
+**📚 Guias de Configuração Azure:**
+
+- [🔧 Setup - Azure Service Bus & Log Analytics](AZURE_SETUP.md)
+- [📊 Queries KQL para Monitoramento](LOG_ANALYTICS_QUERIES.md)
+- [🆘 Troubleshooting - Erros Comuns](TROUBLESHOOTING.md)
+
 ---
 
 ## 🎯 Visão Geral
@@ -28,6 +34,7 @@ O PaymentsAPI é um microsserviço que:
 ### Regra de Negócio
 
 O serviço simula um gateway de pagamento:
+
 - ✅ **Aprovado**: Pagamentos com valor inferior a R$ 10.000,00
 - ❌ **Rejeitado**: Pagamentos com valor igual ou superior a R$ 10.000,00
 
@@ -35,17 +42,17 @@ O serviço simula um gateway de pagamento:
 
 ## 🛠 Tecnologias
 
-| Tecnologia | Versão | Descrição |
-|------------|--------|-----------|
-| .NET | 9.0 | Framework principal |
-| ASP.NET Core | 9.0 | Web API |
-| MassTransit | 8.5.7 | Abstração para mensageria |
-| MassTransit.Azure.ServiceBus.Core | 8.5.7 | Transporte Azure Service Bus |
-| Application Insights | 2.22.0 | Telemetria integrada ao Log Analytics |
-| Swashbuckle | 6.5.0 | Documentação Swagger/OpenAPI |
-| JWT Bearer | 9.0 | Autenticação via token JWT |
-| Docker | - | Containerização |
-| Kubernetes | - | Orquestração (opcional) |
+| Tecnologia                        | Versão | Descrição                             |
+| --------------------------------- | ------ | ------------------------------------- |
+| .NET                              | 9.0    | Framework principal                   |
+| ASP.NET Core                      | 9.0    | Web API                               |
+| MassTransit                       | 8.5.7  | Abstração para mensageria             |
+| MassTransit.Azure.ServiceBus.Core | 8.5.7  | Transporte Azure Service Bus          |
+| Application Insights              | 2.22.0 | Telemetria integrada ao Log Analytics |
+| Swashbuckle                       | 6.5.0  | Documentação Swagger/OpenAPI          |
+| JWT Bearer                        | 9.0    | Autenticação via token JWT            |
+| Docker                            | -      | Containerização                       |
+| Kubernetes                        | -      | Orquestração (opcional)               |
 
 ---
 
@@ -124,6 +131,7 @@ export APPLICATIONINSIGHTS_CONNECTION_STRING="<sua-connection-string-appinsights
 5. Selecione o perfil `http` ou `https`
 
 A aplicação estará disponível em:
+
 - **API:** http://localhost:5059
 - **Swagger:** http://localhost:5059/swagger
 
@@ -214,6 +222,7 @@ docker-compose down -v
 Processa um pagamento manualmente via API REST.
 
 **Request:**
+
 ```bash
 curl -X POST http://localhost:5059/api/payments/process \
   -H "Content-Type: application/json" \
@@ -227,6 +236,7 @@ curl -X POST http://localhost:5059/api/payments/process \
 ```
 
 **Response (Sucesso - 200):**
+
 ```json
 {
   "message": "Pagamento aprovado com sucesso.",
@@ -235,6 +245,7 @@ curl -X POST http://localhost:5059/api/payments/process \
 ```
 
 **Response (Rejeitado - 400):**
+
 ```json
 {
   "message": "Pagamento recusado.",
@@ -247,11 +258,13 @@ curl -X POST http://localhost:5059/api/payments/process \
 Verifica o status de saúde do serviço.
 
 **Request:**
+
 ```bash
 curl http://localhost:5059/api/payments/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -264,6 +277,7 @@ curl http://localhost:5059/api/payments/health
 Endpoint raiz para verificação rápida.
 
 **Response:**
+
 ```
 PaymentsAPI is running...
 ```
@@ -277,12 +291,13 @@ A API utiliza autenticação via **JWT Bearer Token**. Para acessar os endpoints
 
 **Políticas de Autorização:**
 
-| Política | Roles Permitidos | Descrição |
-|----------|------------------|-----------|
-| `Admin` | `Admin` | Acesso total ao sistema |
-| `Leitura` | `Leitura`, `Admin` | Acesso de leitura |
+| Política  | Roles Permitidos   | Descrição               |
+| --------- | ------------------ | ----------------------- |
+| `Admin`   | `Admin`            | Acesso total ao sistema |
+| `Leitura` | `Leitura`, `Admin` | Acesso de leitura       |
 
 **Exemplo de requisição autenticada:**
+
 ```bash
 curl -X POST http://localhost:5059/api/payments/process \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
@@ -304,6 +319,7 @@ Este serviço consome o evento `OrderPlacedEvent` via tópico e assinatura no Se
 **Assinatura:** `payments-api`
 
 **Payload:**
+
 ```json
 {
   "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -314,13 +330,13 @@ Este serviço consome o evento `OrderPlacedEvent` via tópico e assinatura no Se
 }
 ```
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `orderId` | string | Identificador único do pedido |
-| `userId` | string | Identificador do usuário |
-| `gameId` | string | Identificador do jogo comprado |
-| `emailUser` | string | Email do usuário para notificação |
-| `price` | decimal | Valor do pagamento |
+| Campo       | Tipo    | Descrição                         |
+| ----------- | ------- | --------------------------------- |
+| `orderId`   | string  | Identificador único do pedido     |
+| `userId`    | string  | Identificador do usuário          |
+| `gameId`    | string  | Identificador do jogo comprado    |
+| `emailUser` | string  | Email do usuário para notificação |
+| `price`     | decimal | Valor do pagamento                |
 
 > **⚠️ Importante:** O contrato da mensagem deve ser compatível com o tipo `OrderPlacedEvent` publicado no tópico do Service Bus.
 
@@ -331,6 +347,7 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 **Tópico:** `payment-processed`
 
 **Payload:**
+
 ```json
 {
   "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -342,14 +359,14 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 }
 ```
 
-| Campo | Tipo | Valores | Descrição |
-|-------|------|---------|-----------|
-| `orderId` | string | - | Identificador do pedido |
-| `userId` | string | - | Identificador do usuário |
-| `gameId` | string | - | Identificador do jogo comprado |
-| `emailUser` | string | - | Email do usuário para notificação |
-| `price` | decimal | - | Valor do pagamento |
-| `status` | enum | `Approved`, `Rejected` | Resultado do pagamento (PaymentStatus) |
+| Campo       | Tipo    | Valores                | Descrição                              |
+| ----------- | ------- | ---------------------- | -------------------------------------- |
+| `orderId`   | string  | -                      | Identificador do pedido                |
+| `userId`    | string  | -                      | Identificador do usuário               |
+| `gameId`    | string  | -                      | Identificador do jogo comprado         |
+| `emailUser` | string  | -                      | Email do usuário para notificação      |
+| `price`     | decimal | -                      | Valor do pagamento                     |
+| `status`    | enum    | `Approved`, `Rejected` | Resultado do pagamento (PaymentStatus) |
 
 ---
 
@@ -357,18 +374,18 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 
 ### Variáveis de Ambiente
 
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `ASPNETCORE_ENVIRONMENT` | Ambiente de execução | `Development` |
-| `ASPNETCORE_URLS` | URLs da aplicação | `http://localhost:5059` |
-| `Jwt__Key` | Chave secreta para assinatura do JWT | `chave-secreta-super-forte-123456` |
-| `Jwt__Issuer` | Emissor do token JWT | `CloudGamesAPI` |
-| `Jwt__Audience` | Audiência do token JWT | `CloudGamesAPIClient` |
-| `ServiceBus__ConnectionString` | Connection string do Azure Service Bus | `` |
-| `ServiceBus__OrderPlacedTopicName` | Tópico de entrada | `order-placed` |
-| `ServiceBus__OrderPlacedSubscriptionName` | Assinatura de entrada | `payments-api` |
-| `ServiceBus__PaymentProcessedTopicName` | Tópico de saída | `payment-processed` |
-| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Telemetria para Application Insights/Log Analytics | `` |
+| Variável                                  | Descrição                                          | Padrão                             |
+| ----------------------------------------- | -------------------------------------------------- | ---------------------------------- |
+| `ASPNETCORE_ENVIRONMENT`                  | Ambiente de execução                               | `Development`                      |
+| `ASPNETCORE_URLS`                         | URLs da aplicação                                  | `http://localhost:5059`            |
+| `Jwt__Key`                                | Chave secreta para assinatura do JWT               | `chave-secreta-super-forte-123456` |
+| `Jwt__Issuer`                             | Emissor do token JWT                               | `CloudGamesAPI`                    |
+| `Jwt__Audience`                           | Audiência do token JWT                             | `CloudGamesAPIClient`              |
+| `ServiceBus__ConnectionString`            | Connection string do Azure Service Bus             | ``                                 |
+| `ServiceBus__OrderPlacedTopicName`        | Tópico de entrada                                  | `order-placed`                     |
+| `ServiceBus__OrderPlacedSubscriptionName` | Assinatura de entrada                              | `payments-api`                     |
+| `ServiceBus__PaymentProcessedTopicName`   | Tópico de saída                                    | `payment-processed`                |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING`   | Telemetria para Application Insights/Log Analytics | ``                                 |
 
 ### appsettings.json
 
@@ -428,6 +445,7 @@ kubectl apply -f ./k8s/
 ```
 
 **Saída esperada:**
+
 ```
 configmap/payments-api-config created
 deployment.apps/payments-api created
@@ -449,6 +467,7 @@ kubectl logs -f deployment/payments-api
 ```
 
 **Saída esperada:**
+
 ```
 NAME                           READY   STATUS    RESTARTS   AGE
 payments-api-75b78fc9f-xxxxx   1/1     Running   0          30s
@@ -463,17 +482,18 @@ kubectl port-forward service/payments-api 5058:5058
 ```
 
 A aplicação estará disponível em:
+
 - **API:** http://localhost:5058
 - **Swagger:** http://localhost:5058/swagger
 
 ### Arquivos de Configuração Kubernetes
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `k8s/configmap.yaml` | Configurações não-sensíveis (nomes de tópico/assinatura do Service Bus) |
-| `k8s/secret.yaml` | Credenciais sensíveis (Service Bus e Application Insights) |
-| `k8s/deployment.yaml` | Definição do pod, replicas, health checks e recursos |
-| `k8s/service.yaml` | Exposição do serviço internamente no cluster |
+| Arquivo               | Descrição                                                               |
+| --------------------- | ----------------------------------------------------------------------- |
+| `k8s/configmap.yaml`  | Configurações não-sensíveis (nomes de tópico/assinatura do Service Bus) |
+| `k8s/secret.yaml`     | Credenciais sensíveis (Service Bus e Application Insights)              |
+| `k8s/deployment.yaml` | Definição do pod, replicas, health checks e recursos                    |
+| `k8s/service.yaml`    | Exposição do serviço internamente no cluster                            |
 
 ### Comandos Úteis
 
@@ -497,12 +517,12 @@ kubectl delete -f ./k8s/
 
 ### Troubleshooting
 
-| Problema | Solução |
-|----------|---------|
-| Pod em `CrashLoopBackOff` | Verifique logs: `kubectl logs deployment/payments-api` |
-| Pod em `Pending` | Verifique recursos: `kubectl describe pod -l app=payments-api` |
-| Conexão recusada | Verifique se o port-forward está ativo |
-| Service Bus não conecta | Verifique `ServiceBus__ConnectionString` e permissões para tópico/assinatura |
+| Problema                  | Solução                                                                      |
+| ------------------------- | ---------------------------------------------------------------------------- |
+| Pod em `CrashLoopBackOff` | Verifique logs: `kubectl logs deployment/payments-api`                       |
+| Pod em `Pending`          | Verifique recursos: `kubectl describe pod -l app=payments-api`               |
+| Conexão recusada          | Verifique se o port-forward está ativo                                       |
+| Service Bus não conecta   | Verifique `ServiceBus__ConnectionString` e permissões para tópico/assinatura |
 
 > ⚠️ **Nota:** A aplicação depende de recursos Azure externos (Service Bus e Application Insights). Configure os secrets antes do deploy.
 
@@ -551,11 +571,11 @@ PaymentsAPI/
 
 Este microsserviço faz parte do ecossistema **CloudGames**:
 
-| Serviço | Descrição | Comunicação |
-|---------|-----------|-------------|
-| **CatalogAPI** | Gerencia pedidos | Produz `OrderPlacedEvent` |
-| **PaymentsAPI** | Processa pagamentos | Consome `OrderPlacedEvent`, Produz `PaymentProcessedEvent` |
-| **NotificationsAPI** | Envia notificações | Consome `PaymentProcessedEvent` |
+| Serviço              | Descrição           | Comunicação                                                |
+| -------------------- | ------------------- | ---------------------------------------------------------- |
+| **CatalogAPI**       | Gerencia pedidos    | Produz `OrderPlacedEvent`                                  |
+| **PaymentsAPI**      | Processa pagamentos | Consome `OrderPlacedEvent`, Produz `PaymentProcessedEvent` |
+| **NotificationsAPI** | Envia notificações  | Consome `PaymentProcessedEvent`                            |
 
 ---
 

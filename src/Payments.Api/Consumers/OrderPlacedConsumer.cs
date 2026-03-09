@@ -30,7 +30,7 @@ namespace Payments.Api.Consumers
 
 			try
 			{
-				_logger.LogInformation("Processing payment for Order {OrderId}, User {UserId}, Game {GameId}, Amount {Price}", 
+				_logger.LogInformation("Processing payment for Order {OrderId}, User {UserId}, Game {GameId}, Amount {Price}",
 					message.OrderId, message.UserId, message.GameId, message.Price);
 
 				var isApproved = await _paymentService.ProcessPaymentAsync(
