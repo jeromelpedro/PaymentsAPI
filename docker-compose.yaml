@@ -9,18 +9,16 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: "http://+:5058"
+      APPLICATIONINSIGHTS_CONNECTION_STRING: ""
 
       Jwt__Key: "chave-secreta-super-forte-123456"
       Jwt__Issuer: "CloudGamesAPI"
       Jwt__Audience: "CloudGamesAPIClient"
 
-      RabbitMq__HostName: "cloudgames-rabbitmq" 
-      RabbitMq__Port: "5672"
-      RabbitMq__UserName: "guest"
-      RabbitMq__Password: "guest"
-      RabbitMq__ExchangeName: "cloudgames.topic"
-      RabbitMq__QueueNameOrderPlaced: "OrderPlacedEvent"
-      RabbitMq__QueueNamePaymentProcessed: "PaymentProcessedEvent"
+      ServiceBus__ConnectionString: ""
+      ServiceBus__OrderPlacedTopicName: "order-placed"
+      ServiceBus__OrderPlacedSubscriptionName: "payments-api"
+      ServiceBus__PaymentProcessedTopicName: "payment-processed"
 
     networks:
       - cloudgames-network

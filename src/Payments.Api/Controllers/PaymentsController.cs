@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using MassTransit;
 using Payments.Api.Models;
 using Payments.Api.Services.Interfaces;
 
@@ -12,18 +13,18 @@ namespace Payments.Api.Controllers
 	public class PaymentsController : ControllerBase
 	{
 		private readonly IPaymentService _paymentService;
-		private readonly IRabbitMqPublisher _rabbitMqPublisher;
-		private readonly RabbitMqSettings _settings;
+		private readonly IPublishEndpoint _publishEndpoint;
+		private readonly ServiceBusSettings _settings;
 		private readonly ILogger<PaymentsController> _logger;
 
 		public PaymentsController(
 			IPaymentService paymentService,
-			IRabbitMqPublisher rabbitMqPublisher,
-			IOptions<RabbitMqSettings> options,
+			IPublishEndpoint publishEndpoint,
+			IOptions<ServiceBusSettings> options,
 			ILogger<PaymentsController> logger)
 		{
 			_paymentService = paymentService;
-			_rabbitMqPublisher = rabbitMqPublisher;
+			_publishEndpoint = publishEndpoint;
 			_settings = options.Value;
 			_logger = logger;
 		}
@@ -52,10 +53,10 @@ namespace Payments.Api.Controllers
 					Status = isApproved ? PaymentStatus.Approved : PaymentStatus.Rejected
 				};
 
-				await _rabbitMqPublisher.PublishAsync(paymentEvent, _settings.QueueNamePaymentProcessed);
+				await _publishEndpoint.Publish(paymentEvent);
 
-				_logger.LogInformation("Evento PaymentProcessed publicado para OrderId={orderId} Status={status}",
-					request.OrderId, paymentEvent.Status);
+				_logger.LogInformation("Evento PaymentProcessed publicado para OrderId={orderId} Status={status} Topic={topic}",
+					request.OrderId, paymentEvent.Status, _settings.PaymentProcessedTopicName);
 
 				if (isApproved)
 				{

@@ -19,7 +19,7 @@ builder.Logging.AddSerilog(Log.Logger, dispose: true);
 
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddRabbitMqConfiguration(builder.Configuration);
+builder.Services.AddServiceBusConfiguration(builder.Configuration);
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -33,7 +33,6 @@ builder.Services.AddApplicationInsightsTelemetry();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddTransient<IPaymentService, PaymentService>();
-builder.Services.AddTransient<IRabbitMqPublisher, RabbitMqPublisher>();
 builder.Services.AddSwaggerConfiguration();
 
 var app = builder.Build();

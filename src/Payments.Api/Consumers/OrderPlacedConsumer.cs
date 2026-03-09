@@ -8,20 +8,16 @@ namespace Payments.Api.Consumers
 	public class OrderPlacedConsumer : IConsumer<OrderPlacedEvent>
 	{
 		private readonly IPaymentService _paymentService;
-		private readonly IRabbitMqPublisher _rabbitMqPublisher;
 		private readonly ILogger<OrderPlacedConsumer> _logger;
-		private readonly RabbitMqSettings _settings;
+		private readonly ServiceBusSettings _settings;
 
 		public OrderPlacedConsumer(
 			IPaymentService paymentService,
-			IPublishEndpoint publishEndpoint,
 			ILogger<OrderPlacedConsumer> logger,
-			IRabbitMqPublisher rabbitMqPublisher,
-			IOptions<RabbitMqSettings> options)
+			IOptions<ServiceBusSettings> options)
 		{
 			_paymentService = paymentService;
 			_logger = logger;
-			_rabbitMqPublisher = rabbitMqPublisher;
 			_settings = options.Value;
 		}
 
@@ -53,10 +49,10 @@ namespace Payments.Api.Consumers
 					Status = isApproved ? PaymentStatus.Approved : PaymentStatus.Rejected
 				};
 
-				await _rabbitMqPublisher.PublishAsync(paymentEvent, _settings.QueueNamePaymentProcessed);
+				await context.Publish(paymentEvent);
 
-				_logger.LogInformation("Payment for Order {OrderId} processed with status: {Status}", 
-					message.OrderId, paymentEvent.Status);
+				_logger.LogInformation("Payment for Order {OrderId} processed with status: {Status} and published to topic {Topic}",
+					message.OrderId, paymentEvent.Status, _settings.PaymentProcessedTopicName);
 
 				_logger.LogInformation("Consume concluído com sucesso para OrderId={orderId}", message.OrderId);
 			}
