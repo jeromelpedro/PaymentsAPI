@@ -14,17 +14,14 @@ services:
       Jwt__Issuer: "CloudGamesAPI"
       Jwt__Audience: "CloudGamesAPIClient"
 
-      RabbitMq__HostName: "cloudgames-rabbitmq" 
-      RabbitMq__Port: "5672"
-      RabbitMq__UserName: "guest"
-      RabbitMq__Password: "guest"
-      RabbitMq__ExchangeName: "cloudgames.topic"
-      RabbitMq__QueueNameOrderPlaced: "OrderPlacedEvent"
-      RabbitMq__QueueNamePaymentProcessed: "PaymentProcessedEvent"
+      ServiceBus__ConnectionString: ""
+      ServiceBus__QueueNameOrderPlaced: "OrderPlacedEvent"
+      ServiceBus__QueueNamePaymentProcessed: "PaymentProcessedEvent"
+      APPLICATIONINSIGHTS_CONNECTION_STRING: ""
 
     networks:
       - cloudgames-network
 
 networks:
-  cloudgames-network:    
+  cloudgames-network:
     external: true

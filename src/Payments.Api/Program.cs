@@ -1,6 +1,9 @@
+using Azure.Messaging.ServiceBus;
 using Serilog;
 using OpenTelemetry.Trace;
 using Payments.Api.Configurations;
+using Payments.Api.Consumers;
+using Payments.Api.Models;
 using Payments.Api.Services;
 using Payments.Api.Services.Interfaces;
 using Payments.Api.Middlewares;
@@ -19,7 +22,14 @@ builder.Logging.AddSerilog(Log.Logger, dispose: true);
 
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddRabbitMqConfiguration(builder.Configuration);
+builder.Services.Configure<ServiceBusSettings>(builder.Configuration.GetSection("ServiceBus"));
+builder.Services.AddSingleton<ServiceBusClient>(_ =>
+{
+	var connectionString = builder.Configuration["ServiceBus:ConnectionString"];
+	return new ServiceBusClient(connectionString);
+});
+builder.Services.AddSingleton<IServiceBus, ServiceBus>();
+builder.Services.AddHostedService<OrderPlacedConsumer>();
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -33,15 +43,14 @@ builder.Services.AddApplicationInsightsTelemetry();
 builder.Services.AddHttpContextAccessor();
 
 builder.Services.AddTransient<IPaymentService, PaymentService>();
-builder.Services.AddTransient<IRabbitMqPublisher, RabbitMqPublisher>();
 builder.Services.AddSwaggerConfiguration();
 
 var app = builder.Build();
 
 //if (app.Environment.IsDevelopment())
 //{
-	app.UseSwagger();
-	app.UseSwaggerUI();
+app.UseSwagger();
+app.UseSwaggerUI();
 //}
 
 app.UseErrorHandling();

@@ -21,13 +21,14 @@ Microsserviço de Pagamentos responsável por processar (simular) o pagamento de
 O PaymentsAPI é um microsserviço que:
 
 - **Processa pagamentos** de compras de jogos (simulação)
-- **Consome eventos** `OrderPlacedEvent` via RabbitMQ
+- **Consome eventos** `OrderPlacedEvent` via Azure Service Bus
 - **Publica eventos** `PaymentProcessedEvent` após processar pagamentos
 - **Expõe API REST** para processamento manual de pagamentos
 
 ### Regra de Negócio
 
 O serviço simula um gateway de pagamento:
+
 - ✅ **Aprovado**: Pagamentos com valor inferior a R$ 10.000,00
 - ❌ **Rejeitado**: Pagamentos com valor igual ou superior a R$ 10.000,00
 
@@ -35,16 +36,15 @@ O serviço simula um gateway de pagamento:
 
 ## 🛠 Tecnologias
 
-| Tecnologia | Versão | Descrição |
-|------------|--------|-----------|
-| .NET | 9.0 | Framework principal |
-| ASP.NET Core | 9.0 | Web API |
-| MassTransit | 8.5.7 | Abstração para mensageria |
-| RabbitMQ.Client | 7.2.0 | Cliente RabbitMQ |
-| Swashbuckle | 6.5.0 | Documentação Swagger/OpenAPI |
-| JWT Bearer | 9.0 | Autenticação via token JWT |
-| Docker | - | Containerização |
-| Kubernetes | - | Orquestração (opcional) |
+| Tecnologia                 | Versão | Descrição                    |
+| -------------------------- | ------ | ---------------------------- |
+| .NET                       | 9.0    | Framework principal          |
+| ASP.NET Core               | 9.0    | Web API                      |
+| Azure.Messaging.ServiceBus | 7.20.1 | Cliente do Azure Service Bus |
+| Swashbuckle                | 6.5.0  | Documentação Swagger/OpenAPI |
+| JWT Bearer                 | 9.0    | Autenticação via token JWT   |
+| Docker                     | -      | Containerização              |
+| Kubernetes                 | -      | Orquestração (opcional)      |
 
 ---
 
@@ -57,7 +57,7 @@ flowchart LR
     end
 
     subgraph Mensageria
-        B[(RabbitMQ<br/>Message Broker)]
+      B[(Azure Service Bus)]
     end
 
     subgraph PaymentsAPI
@@ -80,7 +80,7 @@ flowchart LR
 
 1. **Recebe** `OrderPlacedEvent` da fila `OrderPlacedEvent`
 2. **Processa** o pagamento via `PaymentService`
-3. **Publica** `PaymentProcessedEvent` no exchange `cloudgames.topic`
+3. **Publica** `PaymentProcessedEvent` na fila `PaymentProcessedEvent`
 
 ---
 
@@ -96,30 +96,20 @@ flowchart LR
 
 ### 🐛 Opção 1: Com debug (Recomendado para Desenvolvimento)
 
-Esta opção permite usar **breakpoints** e todas as funcionalidades de debug, rodando apenas o RabbitMQ no Docker.
+Esta opção permite usar **breakpoints** e todas as funcionalidades de debug, apontando para uma namespace já existente do Azure Service Bus.
 
-#### Passo 1: Garantir que o RabbitMQ esteja rodando
+#### Passo 1: Configurar o Azure Service Bus
 
-> ⚠️ **Nota:** O RabbitMQ não faz parte do docker-compose deste projeto. Ele deve ser iniciado a partir de outro projeto do ecossistema CloudGames ou manualmente.
+> ⚠️ **Nota:** O PaymentsAPI não sobe um emulador de Service Bus. Configure a connection string de uma namespace acessível antes de executar a aplicação.
 
-**Opção A:** Subir via outro projeto CloudGames (ex: CatalogAPI ou NotificationsAPI)
+Defina as variáveis necessárias no ambiente:
 
-**Opção B:** Subir manualmente com Docker:
 ```bash
-# Criar a rede compartilhada (se ainda não existir)
-docker network create cloudgames-network
-
-# Subir o RabbitMQ
-docker run -d --name cloudgames-rabbitmq \
-  --network cloudgames-network \
-  -p 5672:5672 \
-  -p 15672:15672 \
-  -e RABBITMQ_DEFAULT_USER=guest \
-  -e RABBITMQ_DEFAULT_PASS=guest \
-  rabbitmq:3.13-management-alpine
+export ServiceBus__ConnectionString="Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=<key-name>;SharedAccessKey=<key>"
+export ServiceBus__QueueNameOrderPlaced="OrderPlacedEvent"
+export ServiceBus__QueueNamePaymentProcessed="PaymentProcessedEvent"
+export APPLICATIONINSIGHTS_CONNECTION_STRING=""
 ```
-
-> 💡 **Dica:** Acesse http://localhost:15672 para verificar o painel do RabbitMQ (usuário: `guest`, senha: `guest`)
 
 #### Passo 2: Rodar a aplicação com Debug no VS Code
 
@@ -130,6 +120,7 @@ docker run -d --name cloudgames-rabbitmq \
 5. Selecione o perfil `http` ou `https`
 
 A aplicação estará disponível em:
+
 - **API:** http://localhost:5059
 - **Swagger:** http://localhost:5059/swagger
 
@@ -160,7 +151,7 @@ docker-compose logs -f payments-api
 | PaymentsAPI | http://localhost:5058 | API de Pagamentos |
 | PaymentsAPI Swagger | http://localhost:5058/swagger | Documentação da API |
 
-> ⚠️ **Nota:** O RabbitMQ não é iniciado pelo docker-compose deste projeto. A rede `cloudgames-network` é configurada como externa. Certifique-se de que o RabbitMQ já esteja rodando em outro projeto do ecossistema CloudGames.
+> ⚠️ **Nota:** O `docker-compose.yaml` deste projeto não provisiona Azure Service Bus. Informe `ServiceBus__ConnectionString` e as filas antes de subir o container.
 
 ---
 
@@ -169,7 +160,7 @@ docker-compose logs -f payments-api
 Para rodar localmente via terminal:
 
 ```bash
-# 1. Primeiro, garanta que o RabbitMQ esteja rodando (veja Opção 1 - Passo 1)
+# 1. Primeiro, exporte as variáveis do Azure Service Bus (veja Opção 1 - Passo 1)
 
 # 2. Navegue até o projeto
 cd src/Payments.Api
@@ -220,6 +211,7 @@ docker-compose down -v
 Processa um pagamento manualmente via API REST.
 
 **Request:**
+
 ```bash
 curl -X POST http://localhost:5059/api/payments/process \
   -H "Content-Type: application/json" \
@@ -233,6 +225,7 @@ curl -X POST http://localhost:5059/api/payments/process \
 ```
 
 **Response (Sucesso - 200):**
+
 ```json
 {
   "message": "Pagamento aprovado com sucesso.",
@@ -241,6 +234,7 @@ curl -X POST http://localhost:5059/api/payments/process \
 ```
 
 **Response (Rejeitado - 400):**
+
 ```json
 {
   "message": "Pagamento recusado.",
@@ -253,11 +247,13 @@ curl -X POST http://localhost:5059/api/payments/process \
 Verifica o status de saúde do serviço.
 
 **Request:**
+
 ```bash
 curl http://localhost:5059/api/payments/health
 ```
 
 **Response:**
+
 ```json
 {
   "status": "healthy",
@@ -270,6 +266,7 @@ curl http://localhost:5059/api/payments/health
 Endpoint raiz para verificação rápida.
 
 **Response:**
+
 ```
 PaymentsAPI is running...
 ```
@@ -283,12 +280,13 @@ A API utiliza autenticação via **JWT Bearer Token**. Para acessar os endpoints
 
 **Políticas de Autorização:**
 
-| Política | Roles Permitidos | Descrição |
-|----------|------------------|-----------|
-| `Admin` | `Admin` | Acesso total ao sistema |
-| `Leitura` | `Leitura`, `Admin` | Acesso de leitura |
+| Política  | Roles Permitidos   | Descrição               |
+| --------- | ------------------ | ----------------------- |
+| `Admin`   | `Admin`            | Acesso total ao sistema |
+| `Leitura` | `Leitura`, `Admin` | Acesso de leitura       |
 
 **Exemplo de requisição autenticada:**
+
 ```bash
 curl -X POST http://localhost:5059/api/payments/process \
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
@@ -300,17 +298,16 @@ curl -X POST http://localhost:5059/api/payments/process \
 
 ## 📨 Eventos e Mensageria
 
-O serviço utiliza **MassTransit** com **RabbitMQ** para comunicação assíncrona.
+O serviço utiliza **Azure Service Bus** para comunicação assíncrona.
 
 ### OrderPlacedEvent (Consumidor)
 
-Este serviço consome o evento `OrderPlacedEvent` da fila RabbitMQ.
+Este serviço consome o evento `OrderPlacedEvent` via Azure Service Bus.
 
-**Fila:** `OrderPlacedEvent`  
-**Exchange:** `cloudgames.topic`  
-**Tipo:** Topic Exchange
+**Fila:** `OrderPlacedEvent`
 
 **Payload:**
+
 ```json
 {
   "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -321,25 +318,24 @@ Este serviço consome o evento `OrderPlacedEvent` da fila RabbitMQ.
 }
 ```
 
-| Campo | Tipo | Descrição |
-|-------|------|-----------|
-| `orderId` | string | Identificador único do pedido |
-| `userId` | string | Identificador do usuário |
-| `gameId` | string | Identificador do jogo comprado |
-| `emailUser` | string | Email do usuário para notificação |
-| `price` | decimal | Valor do pagamento |
+| Campo       | Tipo    | Descrição                         |
+| ----------- | ------- | --------------------------------- |
+| `orderId`   | string  | Identificador único do pedido     |
+| `userId`    | string  | Identificador do usuário          |
+| `gameId`    | string  | Identificador do jogo comprado    |
+| `emailUser` | string  | Email do usuário para notificação |
+| `price`     | decimal | Valor do pagamento                |
 
-> **⚠️ Importante:** O payload deve ser enviado como JSON puro (sem envelope do MassTransit), pois o serviço utiliza `UseRawJsonSerializer()`.
+> **⚠️ Importante:** O payload deve ser enviado como JSON puro, serializado como `application/json`.
 
 ### PaymentProcessedEvent (Produtor)
 
 Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent`.
 
-**Fila:** `PaymentProcessedEvent`  
-**Exchange:** `cloudgames.topic`  
-**Tipo:** Topic Exchange
+**Fila:** `PaymentProcessedEvent`
 
 **Payload:**
+
 ```json
 {
   "orderId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -351,14 +347,14 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 }
 ```
 
-| Campo | Tipo | Valores | Descrição |
-|-------|------|---------|-----------|
-| `orderId` | string | - | Identificador do pedido |
-| `userId` | string | - | Identificador do usuário |
-| `gameId` | string | - | Identificador do jogo comprado |
-| `emailUser` | string | - | Email do usuário para notificação |
-| `price` | decimal | - | Valor do pagamento |
-| `status` | enum | `Approved`, `Rejected` | Resultado do pagamento (PaymentStatus) |
+| Campo       | Tipo    | Valores                | Descrição                              |
+| ----------- | ------- | ---------------------- | -------------------------------------- |
+| `orderId`   | string  | -                      | Identificador do pedido                |
+| `userId`    | string  | -                      | Identificador do usuário               |
+| `gameId`    | string  | -                      | Identificador do jogo comprado         |
+| `emailUser` | string  | -                      | Email do usuário para notificação      |
+| `price`     | decimal | -                      | Valor do pagamento                     |
+| `status`    | enum    | `Approved`, `Rejected` | Resultado do pagamento (PaymentStatus) |
 
 ---
 
@@ -366,20 +362,17 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
 
 ### Variáveis de Ambiente
 
-| Variável | Descrição | Padrão |
-|----------|-----------|--------|
-| `ASPNETCORE_ENVIRONMENT` | Ambiente de execução | `Development` |
-| `ASPNETCORE_URLS` | URLs da aplicação | `http://localhost:5059` |
-| `Jwt__Key` | Chave secreta para assinatura do JWT | `chave-secreta-super-forte-123456` |
-| `Jwt__Issuer` | Emissor do token JWT | `CloudGamesAPI` |
-| `Jwt__Audience` | Audiência do token JWT | `CloudGamesAPIClient` |
-| `RabbitMq__HostName` | Host do RabbitMQ | `localhost` |
-| `RabbitMq__Port` | Porta do RabbitMQ | `5672` |
-| `RabbitMq__UserName` | Usuário do RabbitMQ | `guest` |
-| `RabbitMq__Password` | Senha do RabbitMQ | `guest` |
-| `RabbitMq__ExchangeName` | Nome do exchange | `cloudgames.topic` |
-| `RabbitMq__QueueNameOrderPlaced` | Fila de entrada | `OrderPlacedEvent` |
-| `RabbitMq__QueueNamePaymentProcessed` | Fila de saída | `PaymentProcessedEvent` |
+| Variável                                | Descrição                                 | Padrão                             |
+| --------------------------------------- | ----------------------------------------- | ---------------------------------- |
+| `ASPNETCORE_ENVIRONMENT`                | Ambiente de execução                      | `Development`                      |
+| `ASPNETCORE_URLS`                       | URLs da aplicação                         | `http://localhost:5059`            |
+| `Jwt__Key`                              | Chave secreta para assinatura do JWT      | `chave-secreta-super-forte-123456` |
+| `Jwt__Issuer`                           | Emissor do token JWT                      | `CloudGamesAPI`                    |
+| `Jwt__Audience`                         | Audiência do token JWT                    | `CloudGamesAPIClient`              |
+| `ServiceBus__ConnectionString`          | Connection string do Azure Service Bus    | vazio                              |
+| `ServiceBus__QueueNameOrderPlaced`      | Fila de entrada                           | `OrderPlacedEvent`                 |
+| `ServiceBus__QueueNamePaymentProcessed` | Fila de saída                             | `PaymentProcessedEvent`            |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | Connection string do Application Insights | vazio                              |
 
 ### appsettings.json
 
@@ -396,12 +389,8 @@ Após processar o pagamento, o serviço publica um evento `PaymentProcessedEvent
     "Issuer": "CloudGamesAPI",
     "Audience": "CloudGamesAPIClient"
   },
-  "RabbitMq": {
-    "HostName": "localhost",
-    "Port": 5672,
-    "UserName": "guest",
-    "Password": "guest",
-    "ExchangeName": "cloudgames.topic",
+  "ServiceBus": {
+    "ConnectionString": "",
     "QueueNameOrderPlaced": "OrderPlacedEvent",
     "QueueNamePaymentProcessed": "PaymentProcessedEvent"
   },
@@ -442,6 +431,7 @@ kubectl apply -f ./k8s/
 ```
 
 **Saída esperada:**
+
 ```
 configmap/payments-api-config created
 deployment.apps/payments-api created
@@ -463,6 +453,7 @@ kubectl logs -f deployment/payments-api
 ```
 
 **Saída esperada:**
+
 ```
 NAME                           READY   STATUS    RESTARTS   AGE
 payments-api-75b78fc9f-xxxxx   1/1     Running   0          30s
@@ -477,17 +468,18 @@ kubectl port-forward service/payments-api 5058:5058
 ```
 
 A aplicação estará disponível em:
+
 - **API:** http://localhost:5058
 - **Swagger:** http://localhost:5058/swagger
 
 ### Arquivos de Configuração Kubernetes
 
-| Arquivo | Descrição |
-|---------|-----------|
-| `k8s/configmap.yaml` | Configurações não-sensíveis (hostname RabbitMQ, filas, etc.) |
-| `k8s/secret.yaml` | Credenciais sensíveis (usuário/senha RabbitMQ em Base64) |
-| `k8s/deployment.yaml` | Definição do pod, replicas, health checks e recursos |
-| `k8s/service.yaml` | Exposição do serviço internamente no cluster |
+| Arquivo               | Descrição                                                           |
+| --------------------- | ------------------------------------------------------------------- |
+| `k8s/configmap.yaml`  | Configurações não-sensíveis das filas do Service Bus                |
+| `k8s/secret.yaml`     | Credenciais sensíveis, incluindo Service Bus e Application Insights |
+| `k8s/deployment.yaml` | Definição do pod, replicas, health checks e recursos                |
+| `k8s/service.yaml`    | Exposição do serviço internamente no cluster                        |
 
 ### Comandos Úteis
 
@@ -511,14 +503,14 @@ kubectl delete -f ./k8s/
 
 ### Troubleshooting
 
-| Problema | Solução |
-|----------|---------|
-| Pod em `CrashLoopBackOff` | Verifique logs: `kubectl logs deployment/payments-api` |
-| Pod em `Pending` | Verifique recursos: `kubectl describe pod -l app=payments-api` |
-| Conexão recusada | Verifique se o port-forward está ativo |
-| RabbitMQ não conecta | O RabbitMQ precisa estar rodando no cluster ou acessível via hostname configurado |
+| Problema                  | Solução                                                                        |
+| ------------------------- | ------------------------------------------------------------------------------ |
+| Pod em `CrashLoopBackOff` | Verifique logs: `kubectl logs deployment/payments-api`                         |
+| Pod em `Pending`          | Verifique recursos: `kubectl describe pod -l app=payments-api`                 |
+| Conexão recusada          | Verifique se o port-forward está ativo                                         |
+| Service Bus não conecta   | Verifique `ServiceBus__ConnectionString` e a existência das filas configuradas |
 
-> ⚠️ **Nota:** A aplicação depende do RabbitMQ. Para um ambiente Kubernetes completo, você precisará fazer deploy do RabbitMQ no cluster ou configurar o `configmap.yaml` para apontar para um RabbitMQ externo.
+> ⚠️ **Nota:** A aplicação depende de uma namespace válida do Azure Service Bus. Para um ambiente Kubernetes completo, você precisará informar a connection string no `secret.yaml` ou via secret externo.
 
 ---
 
@@ -540,25 +532,23 @@ PaymentsAPI/
         ├── Program.cs           # Ponto de entrada
         ├── Payments.Api.csproj  # Projeto .NET
         ├── appsettings.json     # Configurações
-        ├── Configurations/
-        │   └── MassTransitConfig.cs    # Config do MassTransit/RabbitMQ
         ├── Consumers/
-        │   └── OrderPlacedConsumer.cs  # Consumidor de eventos
+        │   └── OrderPlacedConsumer.cs  # Consumidor hospedado do Service Bus
         ├── Controllers/
         │   └── PaymentsController.cs   # Endpoints REST
         ├── Models/
         │   ├── OrderPlacedEvent.cs     # Evento de entrada
         │   ├── PaymentProcessedEvent.cs# Evento de saída
         │   ├── PaymentRequest.cs       # Request da API
-        │   └── RabbitMqSettings.cs     # Configurações RabbitMQ
+        │   └── ServiceBusSettings.cs   # Configurações Service Bus
         ├── Properties/
         │   └── launchSettings.json     # Perfis de execução
         └── Services/
             ├── PaymentService.cs       # Lógica de pagamento
-            ├── RabbitMqPublisher.cs    # Publicador customizado RabbitMQ
+          ├── ServiceBus.cs           # Publicador customizado Service Bus
             └── Interfaces/
                 ├── IPaymentService.cs  # Contrato do serviço
-                └── IRabbitMqPublisher.cs # Contrato do publicador
+            └── IServiceBus.cs      # Contrato do publicador
 ```
 
 ---
@@ -567,11 +557,11 @@ PaymentsAPI/
 
 Este microsserviço faz parte do ecossistema **CloudGames**:
 
-| Serviço | Descrição | Comunicação |
-|---------|-----------|-------------|
-| **CatalogAPI** | Gerencia pedidos | Produz `OrderPlacedEvent` |
-| **PaymentsAPI** | Processa pagamentos | Consome `OrderPlacedEvent`, Produz `PaymentProcessedEvent` |
-| **NotificationsAPI** | Envia notificações | Consome `PaymentProcessedEvent` |
+| Serviço              | Descrição           | Comunicação                                                |
+| -------------------- | ------------------- | ---------------------------------------------------------- |
+| **CatalogAPI**       | Gerencia pedidos    | Produz `OrderPlacedEvent`                                  |
+| **PaymentsAPI**      | Processa pagamentos | Consome `OrderPlacedEvent`, Produz `PaymentProcessedEvent` |
+| **NotificationsAPI** | Envia notificações  | Consome `PaymentProcessedEvent`                            |
 
 ---
 

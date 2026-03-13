@@ -12,18 +12,18 @@ namespace Payments.Api.Controllers
 	public class PaymentsController : ControllerBase
 	{
 		private readonly IPaymentService _paymentService;
-		private readonly IRabbitMqPublisher _rabbitMqPublisher;
-		private readonly RabbitMqSettings _settings;
+		private readonly IServiceBus _serviceBus;
+		private readonly ServiceBusSettings _settings;
 		private readonly ILogger<PaymentsController> _logger;
 
 		public PaymentsController(
 			IPaymentService paymentService,
-			IRabbitMqPublisher rabbitMqPublisher,
-			IOptions<RabbitMqSettings> options,
+			IServiceBus serviceBus,
+			IOptions<ServiceBusSettings> options,
 			ILogger<PaymentsController> logger)
 		{
 			_paymentService = paymentService;
-			_rabbitMqPublisher = rabbitMqPublisher;
+			_serviceBus = serviceBus;
 			_settings = options.Value;
 			_logger = logger;
 		}
@@ -52,7 +52,7 @@ namespace Payments.Api.Controllers
 					Status = isApproved ? PaymentStatus.Approved : PaymentStatus.Rejected
 				};
 
-				await _rabbitMqPublisher.PublishAsync(paymentEvent, _settings.QueueNamePaymentProcessed);
+				await _serviceBus.PublishAsync(_settings.QueueNamePaymentProcessed, paymentEvent);
 
 				_logger.LogInformation("Evento PaymentProcessed publicado para OrderId={orderId} Status={status}",
 					request.OrderId, paymentEvent.Status);
