@@ -48,3 +48,4 @@ nunit-*.xml
 /.vs
 appsettings.Development.json
 
+/src/Payments.Api/appsettings.Development.json
