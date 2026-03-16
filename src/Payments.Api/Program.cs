@@ -1,9 +1,11 @@
-using Serilog;
+using Azure.Messaging.ServiceBus;
 using OpenTelemetry.Trace;
 using Payments.Api.Configurations;
+using Payments.Api.Consumers;
+using Payments.Api.Middlewares;
 using Payments.Api.Services;
 using Payments.Api.Services.Interfaces;
-using Payments.Api.Middlewares;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,12 +21,19 @@ builder.Logging.AddSerilog(Log.Logger, dispose: true);
 
 builder.Configuration.AddEnvironmentVariables();
 
-builder.Services.AddRabbitMqConfiguration(builder.Configuration);
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddAuthConfiguration(builder.Configuration);
+
+// ServiceBus
+builder.Services.AddSingleton<IServiceBus, ServiceBus>();
+builder.Services.AddSingleton<ServiceBusClient>(provider =>
+{
+	var connectionString = builder.Configuration["ServiceBus:ConnectionString"];
+	return new ServiceBusClient(connectionString);
+});
+builder.Services.AddHostedService<ServiceBusConsumer>();
 
 // Application Insights (reads CONNECTION STRING from APPLICATIONINSIGHTS_CONNECTION_STRING env var)
 builder.Services.AddApplicationInsightsTelemetry();
