@@ -1,4 +1,5 @@
 using Azure.Messaging.ServiceBus;
+using Microsoft.ApplicationInsights.Extensibility;
 using OpenTelemetry.Trace;
 using Payments.Api.Configurations;
 using Payments.Api.Consumers;
@@ -9,17 +10,18 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-Log.Logger = new LoggerConfiguration()
+builder.Configuration.AddEnvironmentVariables();
+
+builder.Services.AddApplicationInsightsTelemetry();
+
+builder.Host.UseSerilog((_, services, loggerConfiguration) => loggerConfiguration
 	.MinimumLevel.Information()
 	.Enrich.FromLogContext()
 	.Enrich.With(new Payments.Api.Serilog.ActivityEnricher())
 	.WriteTo.Console()
-	.CreateLogger();
-
-builder.Logging.ClearProviders();
-builder.Logging.AddSerilog(Log.Logger, dispose: true);
-
-builder.Configuration.AddEnvironmentVariables();
+	.WriteTo.ApplicationInsights(
+		services.GetRequiredService<TelemetryConfiguration>(),
+		TelemetryConverter.Traces));
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
@@ -34,9 +36,6 @@ builder.Services.AddSingleton<ServiceBusClient>(provider =>
 	return new ServiceBusClient(connectionString);
 });
 builder.Services.AddHostedService<ServiceBusConsumer>();
-
-// Application Insights (reads CONNECTION STRING from APPLICATIONINSIGHTS_CONNECTION_STRING env var)
-builder.Services.AddApplicationInsightsTelemetry();
 
 // Http context accessor
 builder.Services.AddHttpContextAccessor();
